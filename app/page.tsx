@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import JobDescriptionInput from '@/components/JobDescriptionInput';
 import PersonalInfoForm from '@/components/PersonalInfoForm';
 import ExperienceForm from '@/components/ExperienceForm';
@@ -34,19 +34,8 @@ enum Step {
   PREVIEW = 6,
 }
 
-const REQUIRED_KEYS = ['ANTHROPIC_API_KEY'];
-
 export default function Home() {
   const [step, setStep] = useState<Step>(Step.JOB_DESCRIPTION);
-  const [apiKeyMissing, setApiKeyMissing] = useState(false);
-
-  // Check for required API keys on mount
-  useEffect(() => {
-    const missing = REQUIRED_KEYS.filter(key => !process.env[key]);
-    if (missing.length > 0) {
-      setApiKeyMissing(true);
-    }
-  }, []);
 
   // Data states
   const [jobDescription, setJobDescription] = useState('');
@@ -236,32 +225,6 @@ export default function Home() {
     { num: 6, label: 'Generate Resume', current: step === Step.PREVIEW, done: false },
   ];
 
-  if (apiKeyMissing) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-12 px-4">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
-            <h1 className="text-2xl font-bold text-red-800 mb-4">Configuration Required</h1>
-            <p className="text-red-700 mb-4">
-              This application requires the <code className="bg-red-100 px-2 py-1 rounded font-mono">ANTHROPIC_API_KEY</code> environment variable to be set.
-            </p>
-            <div className="bg-white rounded p-4 border border-red-200">
-              <p className="text-sm text-gray-700 mb-3">
-                To set up the application:
-              </p>
-              <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
-                <li>Get an API key from the <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Anthropic Console</a></li>
-                <li>Create a <code className="bg-gray-100 px-2 py-1 rounded font-mono">.env.local</code> file in the project root</li>
-                <li>Add this line: <code className="block bg-gray-100 p-2 mt-1 rounded font-mono text-xs">ANTHROPIC_API_KEY=your-key-here</code></li>
-                <li>(Optional) Add <code className="bg-gray-100 px-2 py-1 rounded font-mono">GITHUB_TOKEN</code> for higher rate limits</li>
-                <li>Restart the Next.js development server</li>
-              </ol>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
