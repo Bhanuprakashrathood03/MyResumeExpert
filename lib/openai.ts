@@ -1,13 +1,23 @@
 import OpenAI from 'openai';
 import { JobAnalysis, GenerateResumeOutput } from './types';
 
-// Helper to get OpenAI client with env var
+// Helper to get OpenRouter client
 const getOpenAIClient = () => {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    throw new Error('OPENAI_API_KEY is not set');
+    throw new Error('OPENROUTER_API_KEY or OPENAI_API_KEY is not set');
   }
-  return new OpenAI({ apiKey });
+
+  const baseURL = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1';
+
+  return new OpenAI({
+    apiKey,
+    baseURL,
+    defaultHeaders: {
+      'HTTP-Referer': process.env.OPENROUTER_REFERER || 'https://resume-expert.vercel.app',
+      'X-Title': process.env.OPENROUTER_APP_TITLE || 'Resume Expert',
+    },
+  });
 };
 
 // System prompts (same quality standards, adapted for GPT)
@@ -206,7 +216,7 @@ Return JSON exactly:
 
 export const analyzeJobDescription = async (
   jobDescription: string,
-  model: string = 'gpt-4o'
+  model: string = 'anthropic/claude-3-haiku' // Free/cheap model on OpenRouter
 ): Promise<JobAnalysis> => {
   const openai = getOpenAIClient();
   const response = await openai.chat.completions.create({
@@ -245,7 +255,7 @@ export const scoreAndDescribeProject = async (
     stars: number;
     descriptionText: string;
   },
-  model: string = 'gpt-3.5-turbo'
+  model: string = 'anthropic/claude-3-haiku' // Free tier on OpenRouter
 ): Promise<{ score: number; alignmentPoints: string[]; description: string }> => {
   const openai = getOpenAIClient();
   const response = await openai.chat.completions.create({
@@ -287,7 +297,7 @@ export const generateResumeContent = async (
     role: string;
     bullets: string[];
   }>,
-  model: string = 'gpt-4o'
+  model: string = 'anthropic/claude-3-haiku' // Good quality, low cost on OpenRouter
 ): Promise<GenerateResumeOutput> => {
   const openai = getOpenAIClient();
   const response = await openai.chat.completions.create({
