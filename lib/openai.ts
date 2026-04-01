@@ -226,22 +226,30 @@ export const analyzeJobDescription = async (
     messages: [
       {
         role: 'system',
-        content: JOB_ANALYSIS_SYSTEM,
+        content: `${JOB_ANALYSIS_SYSTEM}\n\nIMPORTANT: You must respond with ONLY valid JSON. No explanations, no markdown, no extra text.`,
       },
       {
         role: 'user',
         content: buildJobAnalysisPrompt(jobDescription),
       },
     ],
-    response_format: { type: 'json_object' },
   });
 
   const content = response.choices[0]?.message?.content;
   if (!content) {
-    throw new Error('Failed to get response from OpenAI');
+    throw new Error('Failed to get response from OpenAI/OpenRouter');
   }
 
-  return JSON.parse(content) as JobAnalysis;
+  // Try to extract JSON if wrapped in text
+  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  const jsonString = jsonMatch ? jsonMatch[0] : content;
+
+  try {
+    return JSON.parse(jsonString) as JobAnalysis;
+  } catch (parseError) {
+    console.error('Failed to parse JSON response:', content);
+    throw new Error(`AI did not return valid JSON. Response: ${content.substring(0, 200)}...`);
+  }
 };
 
 export const scoreAndDescribeProject = async (
@@ -265,22 +273,30 @@ export const scoreAndDescribeProject = async (
     messages: [
       {
         role: 'system',
-        content: PROJECT_SCORING_SYSTEM,
+        content: `${PROJECT_SCORING_SYSTEM}\n\nIMPORTANT: You must respond with ONLY valid JSON. No explanations, no markdown, no extra text.`,
       },
       {
         role: 'user',
         content: buildProjectScoringPrompt(jobSummary, atsKeywords, projectInfo),
       },
     ],
-    response_format: { type: 'json_object' },
   });
 
   const content = response.choices[0]?.message?.content;
   if (!content) {
-    throw new Error('Failed to get response from OpenAI');
+    throw new Error('Failed to get response from OpenAI/OpenRouter');
   }
 
-  return JSON.parse(content) as { score: number; alignmentPoints: string[]; description: string };
+  // Try to extract JSON if wrapped in text
+  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  const jsonString = jsonMatch ? jsonMatch[0] : content;
+
+  try {
+    return JSON.parse(jsonString) as { score: number; alignmentPoints: string[]; description: string };
+  } catch (parseError) {
+    console.error('Failed to parse JSON response:', content);
+    throw new Error(`AI did not return valid JSON. Response: ${content.substring(0, 200)}...`);
+  }
 };
 
 export const generateResumeContent = async (
@@ -307,20 +323,28 @@ export const generateResumeContent = async (
     messages: [
       {
         role: 'system',
-        content: RESUME_GENERATION_SYSTEM,
+        content: `${RESUME_GENERATION_SYSTEM}\n\nIMPORTANT: You must respond with ONLY valid JSON. No explanations, no markdown, no extra text.`,
       },
       {
         role: 'user',
         content: buildResumeGenerationPrompt(userInfo, jobAnalysis, experiences),
       },
     ],
-    response_format: { type: 'json_object' },
   });
 
   const content = response.choices[0]?.message?.content;
   if (!content) {
-    throw new Error('Failed to get response from OpenAI');
+    throw new Error('Failed to get response from OpenAI/OpenRouter');
   }
 
-  return JSON.parse(content) as GenerateResumeOutput;
+  // Try to extract JSON if wrapped in text
+  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  const jsonString = jsonMatch ? jsonMatch[0] : content;
+
+  try {
+    return JSON.parse(jsonString) as GenerateResumeOutput;
+  } catch (parseError) {
+    console.error('Failed to parse JSON response:', content);
+    throw new Error(`AI did not return valid JSON. Response: ${content.substring(0, 200)}...`);
+  }
 };
