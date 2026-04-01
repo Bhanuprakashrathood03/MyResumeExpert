@@ -1,5 +1,5 @@
 import { Repository, ProjectMatch, JobAnalysis, ProjectScore } from './types';
-import { scoreAndDescribeProject } from './claude';
+import { scoreAndDescribeProject } from './openai';
 
 // Scoring weights
 const WEIGHTS = {

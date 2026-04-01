@@ -61,9 +61,9 @@ export async function POST(request: NextRequest) {
 
     const { repos, jobAnalysis, userInfo } = validation.data;
 
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
-        { success: false, error: 'ANTHROPIC_API_KEY is not configured on the server' },
+        { success: false, error: 'OPENAI_API_KEY is not configured on the server' },
         { status: 500 }
       );
     }

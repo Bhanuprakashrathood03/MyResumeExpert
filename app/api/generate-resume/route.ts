@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateResumeContent } from '@/lib/claude';
+import { generateResumeContent } from '@/lib/openai';
 import { generateLaTeX, validateLaTeX } from '@/lib/latex-template';
 import { optimizeForATS } from '@/lib/ats-optimizer';
 import { z } from 'zod';
@@ -84,9 +84,9 @@ export async function POST(request: NextRequest) {
 
     const { personalInfo, experiences, matchedProjects, jobAnalysis, education } = validation.data;
 
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
-        { success: false, error: 'ANTHROPIC_API_KEY is not configured on the server' },
+        { success: false, error: 'OPENAI_API_KEY is not configured on the server' },
         { status: 500 }
       );
     }

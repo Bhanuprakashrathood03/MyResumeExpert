@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { analyzeJobDescription } from '@/lib/claude';
+import { analyzeJobDescription } from '@/lib/openai';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -22,9 +22,9 @@ export async function POST(request: NextRequest) {
 
     const { jobDescription } = validation.data;
 
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
-        { success: false, error: 'ANTHROPIC_API_KEY is not configured on the server' },
+        { success: false, error: 'OPENAI_API_KEY is not configured on the server' },
         { status: 500 }
       );
     }

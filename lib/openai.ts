@@ -1,11 +1,16 @@
-import Anthropic from '@anthropic-ai/sdk';
-import { JobAnalysis, GenerateResumeOutput, ProjectMatch } from './types';
+import OpenAI from 'openai';
+import { JobAnalysis, GenerateResumeOutput } from './types';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+// Helper to get OpenAI client with env var
+const getOpenAIClient = () => {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY is not set');
+  }
+  return new OpenAI({ apiKey });
+};
 
-// System prompts
+// System prompts (same quality standards, adapted for GPT)
 const JOB_ANALYSIS_SYSTEM = `You are an elite technical recruiter and ATS optimization expert. Your task is to analyze job descriptions to extract requirements and identify keywords that will score high on Applicant Tracking Systems.
 
 Extract structured information focusing on technical relevance and ATS optimization. Return only valid JSON.`;
@@ -60,9 +65,9 @@ GENERAL:
 
 Return valid JSON with exact values for summary and categorized skills.`;
 
-// Prompt templates
-const buildJobAnalysisPrompt = (jobDescription: string) => `
-Analyze this job description thoroughly. Return JSON with these exact fields:
+// Prompt templates (adapted for OpenAI chat format)
+const buildJobAnalysisPrompt = (jobDescription: string) =>
+  `Analyze this job description thoroughly. Return JSON with these exact fields:
 
 {
   "requiredSkills": ["array of technical and soft skills, 15-25 items max"],
@@ -74,8 +79,7 @@ Analyze this job description thoroughly. Return JSON with these exact fields:
 }
 
 Job Description:
-${jobDescription}
-`;
+${jobDescription}`;
 
 const buildProjectScoringPrompt = (
   jobSummary: string,
@@ -117,8 +121,7 @@ Return JSON:
   "score": 85,
   "alignmentPoints": ["point1", "point2", "point3", "point4", "point5"],
   "description": "Engineered a scalable microservices backend using Node.js and MongoDB, reducing API response times by 40% while handling 10K+ daily requests."
-}
-`;
+}`;
 
 const buildResumeGenerationPrompt = (
   userInfo: {
@@ -199,30 +202,36 @@ Return JSON exactly:
   },
   "atsScore": 98,
   "feedback": "Brief feedback on ATS optimization"
-}
-`;
+}`;
 
-export const analyzeJobDescription = async (jobDescription: string): Promise<JobAnalysis> => {
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+export const analyzeJobDescription = async (
+  jobDescription: string,
+  model: string = 'gpt-4o'
+): Promise<JobAnalysis> => {
+  const openai = getOpenAIClient();
+  const response = await openai.chat.completions.create({
+    model,
     max_tokens: 2000,
     temperature: 0.3,
-    system: JOB_ANALYSIS_SYSTEM,
     messages: [
+      {
+        role: 'system',
+        content: JOB_ANALYSIS_SYSTEM,
+      },
       {
         role: 'user',
         content: buildJobAnalysisPrompt(jobDescription),
       },
     ],
+    response_format: { type: 'json_object' },
   });
 
-  const content = response.content[0]?.type === 'text' ? response.content[0].text : '';
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('Failed to parse job analysis from Claude');
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    throw new Error('Failed to get response from OpenAI');
   }
 
-  return JSON.parse(jsonMatch[0]) as JobAnalysis;
+  return JSON.parse(content) as JobAnalysis;
 };
 
 export const scoreAndDescribeProject = async (
@@ -235,28 +244,33 @@ export const scoreAndDescribeProject = async (
     topics: string[];
     stars: number;
     descriptionText: string;
-  }
+  },
+  model: string = 'gpt-3.5-turbo'
 ): Promise<{ score: number; alignmentPoints: string[]; description: string }> => {
-  const response = await anthropic.messages.create({
-    model: 'claude-3-5-haiku-20241022',
+  const openai = getOpenAIClient();
+  const response = await openai.chat.completions.create({
+    model,
     max_tokens: 1000,
     temperature: 0.4,
-    system: PROJECT_SCORING_SYSTEM,
     messages: [
+      {
+        role: 'system',
+        content: PROJECT_SCORING_SYSTEM,
+      },
       {
         role: 'user',
         content: buildProjectScoringPrompt(jobSummary, atsKeywords, projectInfo),
       },
     ],
+    response_format: { type: 'json_object' },
   });
 
-  const content = response.content[0]?.type === 'text' ? response.content[0].text : '';
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('Failed to parse project scoring from Claude');
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    throw new Error('Failed to get response from OpenAI');
   }
 
-  return JSON.parse(jsonMatch[0]) as { score: number; alignmentPoints: string[]; description: string };
+  return JSON.parse(content) as { score: number; alignmentPoints: string[]; description: string };
 };
 
 export const generateResumeContent = async (
@@ -272,26 +286,31 @@ export const generateResumeContent = async (
     company: string;
     role: string;
     bullets: string[];
-  }>
+  }>,
+  model: string = 'gpt-4o'
 ): Promise<GenerateResumeOutput> => {
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+  const openai = getOpenAIClient();
+  const response = await openai.chat.completions.create({
+    model,
     max_tokens: 4000,
     temperature: 0.5,
-    system: RESUME_GENERATION_SYSTEM,
     messages: [
+      {
+        role: 'system',
+        content: RESUME_GENERATION_SYSTEM,
+      },
       {
         role: 'user',
         content: buildResumeGenerationPrompt(userInfo, jobAnalysis, experiences),
       },
     ],
+    response_format: { type: 'json_object' },
   });
 
-  const content = response.content[0]?.type === 'text' ? response.content[0].text : '';
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('Failed to parse resume generation from Claude');
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    throw new Error('Failed to get response from OpenAI');
   }
 
-  return JSON.parse(jsonMatch[0]) as GenerateResumeOutput;
+  return JSON.parse(content) as GenerateResumeOutput;
 };
